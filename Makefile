@@ -41,11 +41,11 @@ GCC_OPTS=-O3 -Wall -Wextra -m64 -Wmaybe-uninitialized -Wunused-parameter
 main: main.o calculations.o Makefile
 	$(NVCC) -o main main.o calculations.o -L $(OPENCV_LIBPATH) $(OPENCV_LIBS)
 
-main.o: main.cpp utils.h process.cpp
-	g++ -c -g main.cpp $(GCC_OPTS) -I $(CUDA_INCLUDEPATH) -I $(OPENCV_INCLUDEPATH) -I .
+main.o: main.cpp utils.h process.cpp 
+	g++ -c main.cpp $(GCC_OPTS) -I $(CUDA_INCLUDEPATH) -I $(OPENCV_INCLUDEPATH) -I .
 
 calculations.o: calculations.cu utils.h
 	nvcc -c calculations.cu $(NVCC_OPTS)
 
 clean:
-	rm -f *.o main ./Output/*.JPG log.txt ./LightFrames/Stacked/*.JPG log.txt
+	rm -f *.o main ./Output/*.JPG ./LightFrames/Stacked/*.JPG ./DarkFrames/Stacked/*.JPG log.txt
