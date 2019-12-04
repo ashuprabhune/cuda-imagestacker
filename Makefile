@@ -41,7 +41,7 @@ GCC_OPTS=-O3 -Wall -Wextra -m64 -Wmaybe-uninitialized -Wunused-parameter
 main: main.o calculations.o Makefile
 	$(NVCC) -o main main.o calculations.o -L $(OPENCV_LIBPATH) $(OPENCV_LIBS)
 
-main.o: main.cpp utils.h process.cpp 
+main.o: main.cpp utils.h timer.h process.cpp 
 	g++ -c main.cpp $(GCC_OPTS) -I $(CUDA_INCLUDEPATH) -I $(OPENCV_INCLUDEPATH) -I .
 
 calculations.o: calculations.cu utils.h

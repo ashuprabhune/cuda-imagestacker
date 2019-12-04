@@ -15,14 +15,14 @@ cv::Mat inputImage;
 cv::Mat outputImage;
 
 uchar4 *d_frame__;
-uchar4 *h_frame__;
+
 int NUMBER_OF_IMAGES = 0;
 
 size_t numRows() { return inputImage.rows; }
 size_t numCols() { return inputImage.cols; }
 int getNumberOfImages() { return NUMBER_OF_IMAGES; }
 
-void processLightFrames(uchar4* d_lightFrames, uchar4* d_outputLightFrame, int width, int height, int numberOfImages);
+void processFrames(uchar4* d_lightFrames, uchar4* d_outputLightFrame, int width, int height, int numberOfImages);
 void subtractFrames(uchar4* d_outputLightFrame, uchar4* d_outputDarkFrame, uchar4* d_FinalImage, int width, int height);
 
 using namespace cv;
@@ -70,7 +70,7 @@ void preProcessFrames(uchar4** h_frames, uchar4** d_frames, uchar4** d_outputFra
 				cv::Mat image;
 				image = cv::imread(light_frames_folder + entry->d_name, IMREAD_COLOR);
 				cv::cvtColor(image, inputImage, COLOR_BGR2RGBA);
-				std::cout << "Pixel Value: " << (int)(*(uchar4*)inputImage.ptr<unsigned char>(0)).x << " " << std::endl;
+				//std::cout << "Pixel Value: " << (int)(*(uchar4*)inputImage.ptr<unsigned char>(0)).x << " " << std::endl;
 				memcpy (*h_frames + (numPixels * image_number), (uchar4*)inputImage.ptr<unsigned char>(0), sizeof(uchar4) * numPixels);
 				image_number++; 
 			}
@@ -106,7 +106,7 @@ void postProcess(uchar4* data_ptr, std::string output_path)
 	size_t numPixels = numRows() * numCols();
 	checkCudaErrors(cudaMemcpy((uchar4*)outputImage.ptr<unsigned char>(0), data_ptr, sizeof(uchar4) * numPixels, cudaMemcpyDeviceToHost));
 	cv::Mat imageOutputBGR;
-	std::cout << "Pixel Value: " << (int)outputImage.at<uchar4>(0, 0).x << " " << std::endl;
+	//std::cout << "Pixel Value: " << (int)outputImage.at<uchar4>(0, 0).x << " " << std::endl;
 	cv::cvtColor(outputImage, imageOutputBGR, COLOR_RGBA2BGR);	
 	cv::imwrite(output_path.c_str(), imageOutputBGR);
 }
@@ -115,7 +115,7 @@ void stackFrames(uchar4* d_lightFrames, uchar4* d_outputLightFrame){
 	int height = numRows();
 	int width = numCols();
 	int numberOfImages = getNumberOfImages();
-	processLightFrames(d_lightFrames, d_outputLightFrame, width, height, numberOfImages);
+	processFrames(d_lightFrames, d_outputLightFrame, width, height, numberOfImages);
 }
 
 void subtractFramesCall(uchar4* d_outputLightFrame, uchar4* d_outputDarkFrame, uchar4* d_finalOutputFrame)

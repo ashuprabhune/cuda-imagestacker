@@ -12,7 +12,6 @@ void calculateAverageLightFrames(int width, int height, int numberOfImages, ucha
 
   	if(index_y > width || index_x > height)
   		return;
-  	//map the two 2D indices to a single linear, 1D index
   	int grid_width = gridDim.x * blockDim.x;
   	int index = index_y * grid_width + index_x;
   	float red = 0, green = 0, blue = 0;
@@ -53,7 +52,7 @@ void subtractFrames(int width, int height, uchar4* d_LightFrame, uchar4* d_DarkF
   	d_FinalImage[index] = outputPixel;
 }
 
-void processLightFrames(uchar4* d_lightFrames, uchar4* d_outputLightFrame, int width, int height, int numberOfImages)
+void processFrames(uchar4* d_lightFrames, uchar4* d_outputLightFrame, int width, int height, int numberOfImages)
 {
 	std::cout << "Calculating Average of the Frames" << std::endl;
 	std::cout << width << " - "<< height << " - " << numberOfImages << std::endl;

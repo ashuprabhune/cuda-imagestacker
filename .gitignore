@@ -3,3 +3,4 @@
 *.out
 main
 *.o
+*.CR2
