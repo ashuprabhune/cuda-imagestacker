@@ -41,9 +41,6 @@ void subtractFrames(int width, int height, uchar4* d_LightFrame, uchar4* d_DarkF
   	uchar4 lightFramePixel = d_LightFrame[index];
   	uchar4 darkFramePixel = d_DarkFrame[index];
 
-  	if(threadIdx.x == 0 && threadIdx.y == 0 && blockIdx.x == 0 && blockIdx.y == 0)
-  		printf("%d - %d\n", (int)lightFramePixel.x, (int)darkFramePixel.x);
-
   	unsigned char red = lightFramePixel.x - darkFramePixel.x;
   	unsigned char green = lightFramePixel.y - darkFramePixel.y;
   	unsigned char blue = lightFramePixel.z - darkFramePixel.z;
@@ -55,7 +52,7 @@ void subtractFrames(int width, int height, uchar4* d_LightFrame, uchar4* d_DarkF
 void processFrames(uchar4* d_lightFrames, uchar4* d_outputLightFrame, int width, int height, int numberOfImages)
 {
 	std::cout << "Calculating Average of the Frames" << std::endl;
-	std::cout << width << " - "<< height << " - " << numberOfImages << std::endl;
+	//std::cout << width << " - "<< height << " - " << numberOfImages << std::endl;
 	const int thread = 16;
 	const dim3 blockSize(thread, thread);
 	const dim3 gridSize(ceil(height/(float)thread), ceil(width/(float)thread));
@@ -66,7 +63,6 @@ void processFrames(uchar4* d_lightFrames, uchar4* d_outputLightFrame, int width,
 
 void subtractFrames(uchar4* d_outputLightFrame, uchar4* d_outputDarkFrame, uchar4* d_FinalImage, int width, int height)
 {
-	std::cout << "Subtracting Dark Frame from Light Frame" << std::endl;
 	const int thread = 16;
 	const dim3 blockSize(thread, thread);
 	const dim3 gridSize(ceil(height/(float)thread), ceil(width/(float)thread));

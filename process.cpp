@@ -25,6 +25,8 @@ int getNumberOfImages() { return NUMBER_OF_IMAGES; }
 int *redChannel, *greenChannel, *blueChannel; 
 void processFrames(uchar4* d_lightFrames, uchar4* d_outputLightFrame, int width, int height, int numberOfImages);
 void subtractFrames(uchar4* d_outputLightFrame, uchar4* d_outputDarkFrame, uchar4* d_FinalImage, int width, int height);
+void stackFramesSeq(uchar4* h_lightFrames, uchar4* h_outputLightFrame, int width, int height, int numberOfImages);
+void subtractFramesSeq(int width, int height, uchar4* h_firstFrame, uchar4* h_secondFrame, uchar4* h_finalImage);
 
 using namespace cv;
 
@@ -34,10 +36,10 @@ bool has_suffix(const std::string &str, const std::string &suffix)
 	str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
 }
 
-void preProcessFrames(uchar4** h_frames, uchar4** d_frames, uchar4** d_outputFrame, std::string light_frames_folder, std::string frame_type) 
+void preProcessFrames(uchar4** h_frames, uchar4** d_frames, uchar4** d_outputFrame, uchar4** h_outputFrame, std::string light_frames_folder) 
 {
 	checkCudaErrors(cudaFree(0));
-	std::cout << "Pre Processing " << frame_type << " Frames: " << std::endl;
+	//std::cout << "Pre Processing " << frame_type << " Frames: " << std::endl;
 	
 	int image_number = 0;
 	struct dirent *entry;
@@ -58,8 +60,9 @@ void preProcessFrames(uchar4** h_frames, uchar4** d_frames, uchar4** d_outputFra
 	image_number = 0;
 	size_t numPixels = numRows() * numCols();
 	size_t numberOfImages = getNumberOfImages();
-	std::cout << numPixels << " " << numberOfImages << std::endl;
+	//std::cout << numPixels << " " << numberOfImages << std::endl;
 	*h_frames = (uchar4*) malloc(sizeof(uchar4) * numPixels * numberOfImages);
+	*h_outputFrame = (uchar4*) malloc(sizeof(uchar4) * numPixels * numberOfImages);
 	dir = opendir(light_frames_folder.c_str());
 	if(h_frames != NULL) 
 	{
@@ -67,11 +70,9 @@ void preProcessFrames(uchar4** h_frames, uchar4** d_frames, uchar4** d_outputFra
 		{
 			if(has_suffix(light_frames_folder + entry->d_name, ".jpg")) 
 			{
-				std::cout << "Processing Image: " << entry->d_name << std::endl;
 				cv::Mat image;
 				image = cv::imread(light_frames_folder + entry->d_name, IMREAD_COLOR);
 				cv::cvtColor(image, inputImage, COLOR_BGR2RGBA);
-				//std::cout << "Pixel Value: " << (int)(*(uchar4*)inputImage.ptr<unsigned char>(0)).x << " " << std::endl;
 				memcpy (*h_frames + (numPixels * image_number), (uchar4*)inputImage.ptr<unsigned char>(0), sizeof(uchar4) * numPixels);
 				image_number++; 
 			}
@@ -103,12 +104,12 @@ void allocateMemoryForFinalImage(uchar4** d_outputFrame)
 
 void postProcess(uchar4* data_ptr, std::string output_path)
 {
-	std::cout << "Post Processing Image..." << std::endl;
+	//std::cout << "Post Processing Image..." << std::endl;
 	size_t numPixels = numRows() * numCols();
 	checkCudaErrors(cudaMemcpy((uchar4*)outputImage.ptr<unsigned char>(0), data_ptr, sizeof(uchar4) * numPixels, cudaMemcpyDeviceToHost));
 	cv::Mat imageOutputBGR;
-	std::cout << "Pixel Value: " << (int)outputImage.at<uchar4>(0, 0).x << " " << std::endl;
-	cv::cvtColor(outputImage, imageOutputBGR, COLOR_RGBA2BGR);	
+	//std::cout << "Pixel Value: " << (int)outputImage.at<uchar4>(0, 0).x << " " << std::endl;
+	cv::cvtColor(outputImage, imageOutputBGR, COLOR_RGBA2BGR);
 	cv::imwrite(output_path.c_str(), imageOutputBGR);
 }
 
@@ -145,6 +146,21 @@ void calculateFlatAverage(uchar4* d_outputLightFrame, uchar4* h_outputLightFrame
 	int green = thrust::reduce(redChannel, redChannel+numRows()*numCols());
 	int blue = thrust::reduce(redChannel, redChannel+numRows()*numCols());
 	std::cout<<"red: " <<red << " blue: " <<blue << " green:" << green <<std::endl;
+}
+
+void stackFramesSeqCall(uchar4* h_intputFrames, uchar4* h_outputFrame)
+{
+	int height = numRows();
+	int width = numCols();
+	int numberOfImages = getNumberOfImages();
+	stackFramesSeq(h_intputFrames, h_outputFrame, width, height, numberOfImages);
+}
+
+void subtractFramesSeqCall(uchar4* h_firstFrame, uchar4* h_secondFrame, uchar4* h_finalFrame)
+{
+	int height = numRows();
+	int width = numCols();
+	subtractFramesSeq( width, height, h_firstFrame, h_secondFrame, h_finalFrame);
 }
 
 void cleanup()
