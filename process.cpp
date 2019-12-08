@@ -10,7 +10,8 @@
 #include <cuda_runtime_api.h>
 #include "utils.h"
 #include <typeinfo>
-
+#include <thrust/host_vector.h>
+#include <thrust/device_vector.h>
 cv::Mat inputImage;
 cv::Mat outputImage;
 
@@ -21,7 +22,7 @@ int NUMBER_OF_IMAGES = 0;
 size_t numRows() { return inputImage.rows; }
 size_t numCols() { return inputImage.cols; }
 int getNumberOfImages() { return NUMBER_OF_IMAGES; }
-
+int *redChannel, *greenChannel, *blueChannel; 
 void processFrames(uchar4* d_lightFrames, uchar4* d_outputLightFrame, int width, int height, int numberOfImages);
 void subtractFrames(uchar4* d_outputLightFrame, uchar4* d_outputDarkFrame, uchar4* d_FinalImage, int width, int height);
 
@@ -106,7 +107,7 @@ void postProcess(uchar4* data_ptr, std::string output_path)
 	size_t numPixels = numRows() * numCols();
 	checkCudaErrors(cudaMemcpy((uchar4*)outputImage.ptr<unsigned char>(0), data_ptr, sizeof(uchar4) * numPixels, cudaMemcpyDeviceToHost));
 	cv::Mat imageOutputBGR;
-	//std::cout << "Pixel Value: " << (int)outputImage.at<uchar4>(0, 0).x << " " << std::endl;
+	std::cout << "Pixel Value: " << (int)outputImage.at<uchar4>(0, 0).x << " " << std::endl;
 	cv::cvtColor(outputImage, imageOutputBGR, COLOR_RGBA2BGR);	
 	cv::imwrite(output_path.c_str(), imageOutputBGR);
 }
@@ -123,6 +124,27 @@ void subtractFramesCall(uchar4* d_outputLightFrame, uchar4* d_outputDarkFrame, u
 	int height = numRows();
 	int width = numCols();
 	subtractFrames(d_outputLightFrame, d_outputDarkFrame, d_finalOutputFrame, width, height);
+}
+void calculateFlatAverage(uchar4* d_outputLightFrame, uchar4* h_outputLightFrame)
+{
+	redChannel = new int[numRows()*numCols()];
+	blueChannel = new int[numRows()*numCols()];
+	greenChannel = new int[numRows()*numCols()];
+        h_outputLightFrame = (uchar4*)malloc(sizeof(uchar4) * numRows()*numCols());	
+	checkCudaErrors(cudaMemcpy(h_outputLightFrame, d_outputLightFrame, sizeof(uchar4) * numRows()*numCols(), cudaMemcpyDeviceToHost));
+	for(int i =0; i<numRows();i++)
+	{
+		for(int j = 0 ; j<numCols();j++)
+		{
+			redChannel[i* numRows() + j] = h_outputLightFrame[i* numRows() + j].x;
+			blueChannel[i* numRows() + j] = h_outputLightFrame[i* numRows() + j].z;
+			greenChannel[i* numRows() + j] = h_outputLightFrame[i* numRows() + j].y;;
+		}
+	}
+	int red = thrust::reduce(redChannel, redChannel+numRows()*numCols());
+	int green = thrust::reduce(redChannel, redChannel+numRows()*numCols());
+	int blue = thrust::reduce(redChannel, redChannel+numRows()*numCols());
+	std::cout<<"red: " <<red << " blue: " <<blue << " green:" << green <<std::endl;
 }
 
 void cleanup()

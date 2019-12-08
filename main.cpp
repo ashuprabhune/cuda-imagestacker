@@ -10,7 +10,7 @@ int main()
   	std::string dark_frames_folder = "./DarkFrames/";
   	std::string output_file = "./Output/Output.JPG";
 
-	uchar4 *d_lightFrames, *h_lightFrames, *d_outputLightFrame;
+	uchar4 *d_lightFrames, *h_lightFrames, *d_outputLightFrame, *h_outputLightFrame;
 	uchar4 *d_darkFrames, *h_darkFrames, *d_outputDarkFrame;
 	uchar4 *d_outputFrame;
 
@@ -33,7 +33,8 @@ int main()
         std::cerr << "Couldn't print timing information! STDOUT Closed!" << std::endl;
         exit(1);
     }
-
+	
+	calculateFlatAverage(d_outputLightFrame, h_outputLightFrame);
   	//Clear all the Light Frames Data
   	cleanup();
 
@@ -78,7 +79,6 @@ int main()
         std::cerr << "Couldn't print timing information! STDOUT Closed!" << std::endl;
         exit(1);
     }
-
 	cleanup();
 
 }
