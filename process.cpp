@@ -23,8 +23,11 @@ size_t numRows() { return inputImage.rows; }
 size_t numCols() { return inputImage.cols; }
 int getNumberOfImages() { return NUMBER_OF_IMAGES; }
 int *redChannel, *greenChannel, *blueChannel; 
+
 void processFrames(uchar4* d_lightFrames, uchar4* d_outputLightFrame, int width, int height, int numberOfImages);
 void subtractFrames(uchar4* d_outputLightFrame, uchar4* d_outputDarkFrame, uchar4* d_FinalImage, int width, int height);
+void applyFlatFramesDivision(uchar4* d_outputLightFrame, uchar4* d_outputFlatFrame, uchar4* d_FinalImage, uchar4 avgValue, int width, int height);
+
 void stackFramesSeq(uchar4* h_lightFrames, uchar4* h_outputLightFrame, int width, int height, int numberOfImages);
 void subtractFramesSeq(int width, int height, uchar4* h_firstFrame, uchar4* h_secondFrame, uchar4* h_finalImage);
 
@@ -126,26 +129,37 @@ void subtractFramesCall(uchar4* d_outputLightFrame, uchar4* d_outputDarkFrame, u
 	int width = numCols();
 	subtractFrames(d_outputLightFrame, d_outputDarkFrame, d_finalOutputFrame, width, height);
 }
-void calculateFlatAverage(uchar4* d_outputLightFrame, uchar4* h_outputLightFrame)
+
+void applyFlatFrames(uchar4* d_outputLightFrame, uchar4* d_outputDarkFrame, uchar4* d_finalOutputFrame, uchar4 avgValue)
 {
-	redChannel = new int[numRows()*numCols()];
-	blueChannel = new int[numRows()*numCols()];
-	greenChannel = new int[numRows()*numCols()];
-        h_outputLightFrame = (uchar4*)malloc(sizeof(uchar4) * numRows()*numCols());	
-	checkCudaErrors(cudaMemcpy(h_outputLightFrame, d_outputLightFrame, sizeof(uchar4) * numRows()*numCols(), cudaMemcpyDeviceToHost));
-	for(int i =0; i<numRows();i++)
+	int height = numRows();
+	int width = numCols();
+	applyFlatFramesDivision(d_outputLightFrame, d_outputDarkFrame, d_finalOutputFrame, avgValue, width, height);
+}
+
+uchar4 calculateFlatAverage(uchar4* d_outputFlatFrame, uchar4* h_outputFlatFrame)
+{
+	redChannel = new int[(numRows()*numCols())/4];
+	blueChannel = new int[(numRows()*numCols())/4];
+	greenChannel = new int[(numRows()*numCols())/4];
+    h_outputFlatFrame = (uchar4*)malloc(sizeof(uchar4) * numRows()* numCols());
+    int k = 0;	
+	checkCudaErrors(cudaMemcpy(h_outputFlatFrame, d_outputFlatFrame, sizeof(uchar4) * numRows()*numCols(), cudaMemcpyDeviceToHost));
+	for(int i = numRows() / 4; i < (int)(numRows() / 4 ) * 3;i++)
 	{
-		for(int j = 0 ; j<numCols();j++)
+		for(int j = numCols() / 4 ; j < (int)(numCols() / 4 ) * 3;j++)
 		{
-			redChannel[i* numRows() + j] = h_outputLightFrame[i* numRows() + j].x;
-			blueChannel[i* numRows() + j] = h_outputLightFrame[i* numRows() + j].z;
-			greenChannel[i* numRows() + j] = h_outputLightFrame[i* numRows() + j].y;;
+			redChannel[k] = h_outputFlatFrame[i* numRows() + j].x;
+			blueChannel[k] = h_outputFlatFrame[i* numRows() + j].z;
+			greenChannel[k] = h_outputFlatFrame[i* numRows() + j].y;
+			k++;
 		}
 	}
-	int red = thrust::reduce(redChannel, redChannel+numRows()*numCols());
-	int green = thrust::reduce(redChannel, redChannel+numRows()*numCols());
-	int blue = thrust::reduce(redChannel, redChannel+numRows()*numCols());
-	std::cout<<"red: " <<red << " blue: " <<blue << " green:" << green <<std::endl;
+	int red = thrust::reduce(redChannel, redChannel + (numRows()*numCols())/4);
+	int green = thrust::reduce(blueChannel, blueChannel + (numRows()*numCols())/4);
+	int blue = thrust::reduce(greenChannel, greenChannel + (numRows()*numCols())/4);
+	uchar4 finalValue = make_uchar4(red/((numRows()*numCols())/4), green/((numRows()*numCols())/4), blue/((numRows()*numCols())/4), 255);
+	return finalValue;
 }
 
 void stackFramesSeqCall(uchar4* h_intputFrames, uchar4* h_outputFrame)
